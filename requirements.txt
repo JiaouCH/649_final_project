@@ -1,0 +1,10 @@
+pandas
+numpy
+panel
+altair
+vega_datasets
+jupyter
+transformers
+torch
+aiohttp
+datetime
