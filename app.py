@@ -1,6 +1,7 @@
 import streamlit as st
 import altair as alt
 import pandas as pd
+import panel as pn
 from vega_datasets import data
 import warnings
 
@@ -8,42 +9,40 @@ import warnings
 warnings.filterwarnings('ignore')
 countries = alt.topo_feature(data.world_110m.url, 'countries')
 
-# to plot your own data, replace data.csv and further down,
-# rename "fantasy_value" by something descriptive for your data
+# Load datasets
 values = pd.read_csv("burden-disease-from-each-mental-illness.csv")
 
-# Assuming your DataFrame is named df_country_with_id
-# You can rename the columns and replace 'country-code' with 'id' using the following code:
-
+# Dataset preprocessing
 values.rename(columns={
     'Entity': 'name',
     'Code': 'alpha-3',
-    'DALYs from depressive disorders per 100,000 people in, both sexes aged age-standardized': 'Depressive',
+    'DALYs from depressive disorders per 100,000 people in, both sexes aged age-standardized': 'Depression',
     'DALYs from schizophrenia per 100,000 people in, both sexes aged age-standardized': 'Schizophrenia',
-    'DALYs from bipolar disorder per 100,000 people in, both sexes aged age-standardized': 'Bipolar_Disorder',
-    'DALYs from eating disorders per 100,000 people in, both sexes aged age-standardized': 'Eating_Disorders',
-    'DALYs from anxiety disorders per 100,000 people in, both sexes aged age-standardized': 'Anxiety_Disorders',
+    'DALYs from bipolar disorder per 100,000 people in, both sexes aged age-standardized': 'Bipolar Disorder',
+    'DALYs from eating disorders per 100,000 people in, both sexes aged age-standardized': 'Eating Disorders',
+    'DALYs from anxiety disorders per 100,000 people in, both sexes aged age-standardized': 'Anxiety Disorders',
 }, inplace=True)
 values_all_years = values
-# values = values[values['Year'] == 2019]
-quantitative_columns = ['alpha-3','Depressive', 'Schizophrenia', 'Bipolar_Disorder', 'Eating_Disorders', 'Anxiety_Disorders']
+quantitative_columns = ['alpha-3','Depression', 'Schizophrenia', 'Bipolar Disorder', 'Eating Disorders', 'Anxiety Disorders']
 values.dropna(subset=quantitative_columns, inplace=True)
 
-
 # Enable Panel extensions
+pn.extension()
 alt.data_transformers.disable_max_rows()
-countries = alt.topo_feature(data.world_110m.url, "countries")
-    # https://en.wikipedia.org/wiki/ISO_3166-1_numeric    
+countries = alt.topo_feature(data.world_110m.url, "countries")  
 country_codes = pd.read_csv(
     "https://raw.githubusercontent.com/lukes/ISO-3166-Countries-with-Regional-Codes/master/all/all.csv"
 )
 
-# Define a function to create and return a plot
-
-def create_plot(values, subgroup, year=2019):
+###### First plots ########
+def create_plot_first(subgroup, year=2019):
     values_tmp = values[values['Year'] == year]
     # Apply any required transformations to the data in pandas
-    background = alt.Chart(countries).mark_geoshape(fill="lightgray")
+    background = alt.Chart(countries).mark_geoshape(
+        fill="lightgray"
+        ).transform_filter(
+            alt.datum.id != 10 # Exclude Antarctica from the map
+        )
 
     # we transform twice, first from "ISO 3166-1 numeric" to name, then from name to value
     selection = alt.selection_point(fields=["name"], empty="none")
@@ -154,6 +153,68 @@ def create_plot(values, subgroup, year=2019):
     final_visualization = final_visualization.configure_title(fontSize=16).configure_legend(offset=0,padding=0,titleFontSize=11, labelFontSize=11)
     return final_visualization
     
+
+##### Second Plots ########
+def creat_plot_line_second(df, color_col, title):
+    if color_col == 'Race/Ethnicity':
+        bar = alt.Chart(df_race).mark_bar(color='#7EA1FF').encode(
+        alt.Y('Race/Ethnicity:N', sort='-x', title=None),
+        alt.X('percentage:Q', scale=alt.Scale(domain=[0, 0.18])),
+        tooltip=alt.Text('percentage:Q', format='.1%', title=None)
+        ).properties(
+            title=title
+        ).configure_axis(
+            grid=False
+        )
+        return bar
+    else:
+        nearest = alt.selection_point(nearest=True, on='mouseover', fields=['year'], empty=False)
+        legend_selection = alt.selection_point(fields=[color_col], bind='legend')
+
+        # Create the base chart and filter to All polls
+        line = alt.Chart(df).mark_line(
+            interpolate='basis',
+            size=2.5
+            ).encode(
+                x=alt.X('year:N', title=None, axis=alt.Axis(labels=False)),
+                y=alt.Y('percentage:Q', axis=alt.Axis(format='%')),
+                color=f"{color_col}:N"
+            ).properties(
+                title=title
+            ).add_params(
+                legend_selection
+            ).transform_filter(
+                legend_selection
+            )
+
+        # Vertical line
+        rules = alt.Chart(df).mark_rule(color='lightgray', size=2).encode(
+            x='year:N',
+        ).transform_filter(
+            nearest
+        )
+
+        # interaction dots
+        selectors = alt.Chart(df).mark_point().encode(
+            x='year:N',
+            opacity=alt.value(0),
+        ).add_params(
+            nearest
+        )
+        points = line.mark_point(size=90).encode(
+            opacity=alt.condition(nearest, alt.value(1), alt.value(0))
+        )
+
+        # interaction text labels
+        text = line.mark_text(align='left', dx=7, dy=15, fontSize=14).encode(
+            text=alt.condition(nearest, alt.Text('percentage:Q', format='.4f'), alt.value(' '))
+        )
+
+        # Put them all together
+        final_viz = alt.layer(line, points, selectors, rules, text)
+        return final_viz
+
+
 if __name__ == '__main__':
     st.markdown(
     f"""
@@ -162,8 +223,6 @@ if __name__ == '__main__':
             margin-left: {1}rem;
             max-width: {1800}px;
             padding-top: {1}rem;
-            padding-right: {1}rem;
-            padding-left: {1}rem;
             padding-bottom: {1}rem;
         }}
         .reportview-container .main {{
@@ -174,50 +233,86 @@ if __name__ == '__main__':
     """
     ,unsafe_allow_html=True,
     )
+
     warnings.filterwarnings('ignore')
     countries = alt.topo_feature(data.world_110m.url, 'countries')
-
-    # to plot your own data, replace data.csv and further down,
-    # rename "fantasy_value" by something descriptive for your data
     values = pd.read_csv("burden-disease-from-each-mental-illness.csv")
-
-    # Assuming your DataFrame is named df_country_with_id
-    # You can rename the columns and replace 'country-code' with 'id' using the following code:
-
     values.rename(columns={
         'Entity': 'name',
         'Code': 'alpha-3',
-        'DALYs from depressive disorders per 100,000 people in, both sexes aged age-standardized': 'Depressive',
+        'DALYs from depressive disorders per 100,000 people in, both sexes aged age-standardized': 'Depression',
         'DALYs from schizophrenia per 100,000 people in, both sexes aged age-standardized': 'Schizophrenia',
-        'DALYs from bipolar disorder per 100,000 people in, both sexes aged age-standardized': 'Bipolar_Disorder',
-        'DALYs from eating disorders per 100,000 people in, both sexes aged age-standardized': 'Eating_Disorders',
-        'DALYs from anxiety disorders per 100,000 people in, both sexes aged age-standardized': 'Anxiety_Disorders',
+        'DALYs from bipolar disorder per 100,000 people in, both sexes aged age-standardized': 'Bipolar Disorder',
+        'DALYs from eating disorders per 100,000 people in, both sexes aged age-standardized': 'Eating Disorders',
+        'DALYs from anxiety disorders per 100,000 people in, both sexes aged age-standardized': 'Anxiety Disorders',
     }, inplace=True)
-    values_all_years = values
-    quantitative_columns = ['alpha-3','Depressive', 'Schizophrenia', 'Bipolar_Disorder', 'Eating_Disorders', 'Anxiety_Disorders']
-    values.dropna(subset=quantitative_columns, inplace=True)
 
+    values_all_years = values
+    quantitative_columns = ['alpha-3','Depression', 'Schizophrenia', 'Bipolar Disorder', 'Eating Disorders', 'Anxiety Disorders']
+    values.dropna(subset=quantitative_columns, inplace=True)
 
     # Enable Panel extensions
     alt.data_transformers.disable_max_rows()
-    countries = alt.topo_feature(data.world_110m.url, "countries")
-        # https://en.wikipedia.org/wiki/ISO_3166-1_numeric    
+    countries = alt.topo_feature(data.world_110m.url, "countries")   
     country_codes = pd.read_csv(
         "https://raw.githubusercontent.com/lukes/ISO-3166-Countries-with-Regional-Codes/master/all/all.csv"
     )
-    st.title('Mental Health Disorders')
-    st.header('What is Mental Health Disorders?')
-    st.write("Mental health problems, also known as mental health disorders or mental illnesses, encompass a wide range of conditions that affect a person's mood, thinking, behavior, and overall psychological well-being. Mental health problems are classified into several categories according to recognized systems such as the Diagnostic and Statistical Manual of Mental Disorders (DSM) and the International Classification of Diseases (ICD). Some common categories include: Anxiety Disorders, Eating Disorders, Trauma and Stressor-Related Disorders and Mood Disorders, which include conditions like depression and bipolar disorder, characterized by significant disturbances in a person's mood and emotional state.")
-    st.header('How Close Are We to Confronting Mental Health Disorders?')
-    st.write("You might think that mental health disorders are not as common as other health problems, but they are actually quite prevalent. According to the World Health Organization (WHO), mental health disorders are the leading cause of disability worldwide. In fact, it is estimated that one in four people will experience a mental health disorder at some point in their lives. ")
-    st.write("")
-    st.write("Mental health problems are significantly related to a country's development and the quality of life. Looking at the figure below, you can see the burden of mental health disorders in different countries around the world. The darker the shade of red, the higher the burden of mental health disorders in that country. In fact, 9 out of the 10 countries listed with the highest rates of depression are developing countries or regions. However, if you think citizens of developed countries are less likely to experience mental disorders, you are completely mistaken. Even a developed country like the United States has a high burden of depression and schizophrenia. Other developed countries such as Australia and the United Kingdom also have a high burden of mental health disorders. In 2019, Australia had the highest burden of eating disorders. The eating-disorder burden in Australia was 3 times higher than the global average and was continuously increasing since 1990.")
-    subgroup_choice = st.sidebar.selectbox("Select the disease you would like to explore:", ['Depressive', 'Schizophrenia', 'Bipolar_Disorder', 'Eating_Disorders', 'Anxiety_Disorders'])
-    year_choice = st.sidebar.selectbox("Select the year you would like to explore:", [2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990])
-    # Whenever the selection changes, this will re-run and update the plot.
-    st.altair_chart(create_plot(values, subgroup_choice, year_choice), use_container_width=True)
-# st.title('Disease Explorer')
-# subgroup_choice = st.selectbox("Select the disease you would like to explore:", ['Depressive', 'Schizophrenia', 'Bipolar_Disorder', 'Eating_Disorders', 'Anxiety_Disorders'])
 
-# # Whenever the selection changes, this will re-run and update the plot.
-# st.altair_chart(create_plot(subgroup_choice), use_container_width=True)
+######################################################################################################################
+    # Displayed Contents
+    st.markdown("# Shining a Spotlight on Depression: Urgent Attention Required for this Mental Health Disorder")
+    st.markdown('## What is Mental Health Disorders?')
+    st.markdown("Mental health problems, also known as mental health disorders or mental illnesses, encompass a wide range of conditions that affect a person's mood, thinking, behavior, and overall psychological well-being. Mental health problems are classified into several categories according to recognized systems such as the Diagnostic and Statistical Manual of Mental Disorders (DSM) and the International Classification of Diseases (ICD). Some common categories include: **Anxiety Disorders**, **Eating Disorders**, **Schizophrenia**, and Trauma and Stressor-Related Disorders and Mood Disorders, which include conditions like **depression** and **bipolar disorder**, characterized by significant disturbances in a person's mood and emotional state.")
+
+    st.markdown('## How Close are We to Confronting Mental Health Disorders?')
+    st.markdown(
+        "You might think that mental health disorders are not as common as other health problems, but they are actually quite prevalent. According to the World Health Organization (WHO), mental health disorders are the leading cause of disability worldwide. In fact, it is estimated that **one in four people will experience a mental health disorder at some point in their lives**.\n\n Interacting with the figures below, you'll delve into the evolving landscape of mental health disorders across different countries worldwide. The darker the shade of red, the higher the burden of mental health disorders in that country. Upon closer examination, you'll discover that **mental health issues transcend national boundaries and socioeconomic status, affecting individuals from all walks of life**. For instance, in 2019, nine out of the ten countries with the highest rates of depression were developing regions. However, developed countries also face their share of struggles with mental disorders, with the United States leading in schizophrenia rates and Australia grappling with a significant burden of eating disorders. Remarkably, Australia's incidence of eating disorders was three times higher than the global average and has shown a steady increase since 1990. \n\n")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        subgroup_choice = st.selectbox("Select the disease you would like to explore:", ['Depression', 'Schizophrenia', 'Bipolar Disorder', 'Eating Disorders', 'Anxiety Disorders'])
+
+    with col2:
+        year_choice = st.selectbox("Select the year you would like to explore:", [2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990])
+
+    st.altair_chart(create_plot_first(subgroup_choice, year_choice), use_container_width=True)
+
+
+    ######## Second Plot ########
+    st.markdown("Different mental disorders may have similarities, but they also differ, such as why people get them or how to treat them. Their prevalence among demographics also varies: some may affect certain age groups or genders more, while others don't show clear patterns. It's hard to talk about all of them in one article, so we're focusing on depression. Looking at the world map above, it seems like all countries have similar dark hue on the depression issue, compared to when we look at *Eating DIsorders*, only Australia and North America stand out. This suggests that depression is a big problem everywhere. We are hoping to populate basic trend about depression, so as to bring this bitable issue to more people's attention and help people support their families or friends who might be experiencing it.")
+
+    st.markdown('## What Groups are Vulnerable to Depression?')
+    st.markdown("To focus our discussion, we specifically examine depression in the United States. Statistics reveal that **women are nearly twice as likely as men to receive a depression diagnosis**. This trend may stem from hormonal fluctuations during puberty and significant life changes such as pregnancy. Girls typically mature earlier than boys and tend to be more emotionally sensitive, suggesting that this depression gap persists throughout lifespan.Furthermore, while depression can occur at any age, it appears to be more prevalent among younger demographics. **Adolescents aged 12-17 exhibit the highest rates of depression**, with a rising trend, followed by young adults aged 18 to 25 who may just get out of school and navigate lives on their own. Conversely, elderly individuals, with fewer social and work-related pressures, have the lowest rates of depression. Additionally, financial stability plays a role in mental health. **Individuals with a higher Poverty-Income Ratio (PIR) are less susceptible to depression than those with lower PIRs**. Moreover, the incidence of depression varies across different racial and ethnic groups. **Individuals of mixed racial backgrounds are particularly vulnerable to depression**, with Native American/American Indian and White individuals following closely.")
+
+    st.markdown("The chart below shows how depression impacts various demographic groups, including age, race, income level, and gender. While we focus on male and female genders to ensure data consistency from 1990 to 2019, it's important to note that LGBTQ+ individuals often experience higher rates of depression, influenced by societal pressures and familial dynamics. Also, due to the proximity of some data points, the value labels may overlap. To address this issue, you can click on a specific field in the legend to isolate it on the plot.")
+
+    df_gender = pd.read_csv('depression_by_gender.csv')
+    df_age = pd.read_csv('depression_age.csv')
+    df_income = pd.read_csv('depression_income.csv')
+    df_race = pd.read_csv('depression_race.csv')
+    df_gender['percentage'] = df_gender['percentage'].str.rstrip('%').astype(float) / 100
+    df_age['percentage'] = df_age['percentage'].str.rstrip('%').astype(float) / 100
+    df_income['percentage'] = df_income['percentage'].str.rstrip('%').astype(float) / 100
+    dict_map = {'Gender': [df_gender, "Percentage of U.S. Population that had Depression from 1990 to 2019 by Gender"],
+                 'Age': [df_age, "Percentage of U.S. Population that had Depression from 2009 to 2017 by Age"],
+                 'Income': [df_income, "Percentage of U.S. Population that had Depression from 2006 to 2016 by PIR"],
+                 'Race/Ethnicity': [df_race, 'Percentage of U.S. Population that had Depression by Race/Ethnicity in 2021']}
+    
+    aspect_type = st.selectbox("Select a factor to break down:", ['Gender', 'Age', 'Income', 'Race/Ethnicity'])
+    st.altair_chart(creat_plot_line_second(dict_map[aspect_type][0], aspect_type, dict_map[aspect_type][1]), use_container_width=True)
+
+    st.markdown("Understanding which groups are more vulnerable to depression allows us to prioritize support for those individuals, such as our mothers, sisters, and girlfriends. For parents, it's crucial to monitor the mental well-being of your teenage children and provide them with the care and attention they need. If you belong to one of these vulnerable groups, remember to stay positive and persevere through temporary low points in life. You got this!")
+
+    ######## Third Plot #########
+    st.markdown('## Depression can Still be Cured')
+    st.markdown("Or other topics")
+
+
+    ####### References ###########
+    st.write("")
+    st.write("")
+    st.markdown('#### References')
+    st.markdown("[1]. Zare, Hossein et al. “How Income and Income Inequality Drive Depressive Symptoms in U.S. Adults, Does Sex Matter: 2005-2016.” International journal of environmental research and public health vol. 19,10 6227. 20 May. 2022, doi:10.3390/ijerph19106227. [Apr.25, 2024]")
+    st.markdown("[2]. 'Major Depression.' *National Institute of Mental Health*, https://www.nimh.nih.gov/health/statistics/major-depression#part_2567. [Apr.24, 2024]")
+    st.markdown("[3]. 'Percentage of People in the U.S. who suffered from depression from 1990 to 2019 by gender.' *statista*, https://www.statista.com/statistics/979898/percentage-of-people-with-depression-us-by-gender. [Apr.24, 2024]")
+    st.markdown("[4]. Twenge, Jean, et.al. 'Age, Period, and Cohort Trends in Mood Disorder Indicators and Suicide-Related Outcomes in a Nationally Representative Datasets, 2005-2017.' *American Psychological Association*, https://www.apa.org/pubs/journals/releases/abn-abn0000410.pdf. [Apr.24, 2024]")
