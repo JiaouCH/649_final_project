@@ -305,7 +305,7 @@ if __name__ == '__main__':
     # f"""
     # <style>
     #     .reportview-container .main .block-container{{
-    #         margin-left: {1}rem;
+    #         margin-left: {0.7}rem;
     #         max-width: {1600}px;
     #         padding-top: {1}rem;
     #         padding-bottom: {1}rem;
