@@ -160,8 +160,8 @@ def creat_plot_line_second(df, color_col, title):
         tooltip=alt.Text('percentage:Q', format='.1%', title=None)
         ).properties(
             title=title,
-            width=200,
-            height=150
+            width=100,
+            height=200
         ).configure_axis(
             grid=False
         )
@@ -180,8 +180,8 @@ def creat_plot_line_second(df, color_col, title):
                 color=f"{color_col}:N"
             ).properties(
                 title=title,
-                width=200,
-                height=150
+                width=100,
+                height=250
             ).add_params(
                 legend_selection
             ).transform_filter(
