@@ -159,7 +159,9 @@ def creat_plot_line_second(df, color_col, title):
         alt.X('percentage:Q', scale=alt.Scale(domain=[0, 0.18])),
         tooltip=alt.Text('percentage:Q', format='.1%', title=None)
         ).properties(
-            title=title
+            title=title,
+            width=200,
+            height=150
         ).configure_axis(
             grid=False
         )
@@ -177,7 +179,9 @@ def creat_plot_line_second(df, color_col, title):
                 y=alt.Y('percentage:Q', axis=alt.Axis(format='%')),
                 color=f"{color_col}:N"
             ).properties(
-                title=title
+                title=title,
+                width=200,
+                height=150
             ).add_params(
                 legend_selection
             ).transform_filter(
