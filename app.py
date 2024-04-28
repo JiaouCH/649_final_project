@@ -1,7 +1,6 @@
 import streamlit as st
 import altair as alt
 import pandas as pd
-import panel as pn
 from vega_datasets import data
 import warnings
 
@@ -26,9 +25,7 @@ values_all_years = values
 quantitative_columns = ['alpha-3','Depression', 'Schizophrenia', 'Bipolar Disorder', 'Eating Disorders', 'Anxiety Disorders']
 values.dropna(subset=quantitative_columns, inplace=True)
 
-# Enable Panel extensions
-pn.extension()
-alt.data_transformers.disable_max_rows()
+# alt.data_transformers.disable_max_rows()
 countries = alt.topo_feature(data.world_110m.url, "countries")  
 country_codes = pd.read_csv(
     "https://raw.githubusercontent.com/lukes/ISO-3166-Countries-with-Regional-Codes/master/all/all.csv"
@@ -214,27 +211,118 @@ def creat_plot_line_second(df, color_col, title):
         final_viz = alt.layer(line, points, selectors, rules, text)
         return final_viz
 
+##### Third Plot ########
+def plot_depression_recent_prevalence():
+    depression = pd.read_csv("BRFSS_Age-Adjusted_Prevalence_Data_Depression.csv")
+    depression = depression[depression["Response"] == "Yes"]
+    depression.rename(columns={"Locationdesc": "State", "Data_value": "Depression_rate"}, inplace=True)
+    
+    depression_recent = depression[depression["Year"] >= 2020]
+    depression_recent = depression_recent.groupby(["LocationID", "State"])["Depression_rate"].mean().reset_index()
 
-if __name__ == '__main__':
-    st.markdown(
-    f"""
-    <style>
-        .reportview-container .main .block-container{{
-            margin-left: {1}rem;
-            max-width: {1800}px;
-            padding-top: {1}rem;
-            padding-bottom: {1}rem;
-        }}
-        .reportview-container .main {{
-            color: white;
-            background-color: black;
-        }}
-    </style>
-    """
-    ,unsafe_allow_html=True,
+    states = alt.topo_feature(data.us_10m.url, 'states')
+    selection = alt.selection_point(
+        fields=["LocationID"],
+        value=[{"LocationID":54}, {"LocationID":21}, {"LocationID":26}, {"LocationID":47}],
+        empty=False)
+    stroke_width_condition = alt.condition(selection, alt.value(1.5), alt.value(0.4))
+
+    map = alt.Chart(states).mark_geoshape(stroke="black").project(
+        type='albersUsa'
+    ).transform_lookup(
+        lookup='id',
+        from_=alt.LookupData(depression_recent, "LocationID", list(depression.columns))
+    ).encode(
+        alt.Color("Depression_rate:Q", legend=alt.Legend(
+            orient="top",
+            direction='horizontal',
+            title="Depression Rate (%)"
+        )).scale(scheme="blues", domain=(10, 30)),
+        strokeWidth=stroke_width_condition,
+        tooltip=["State:N", "Depression_rate:Q"]
+    ).add_params(
+        selection
+    ).properties(
+        title="Prevalence of Depression by State after the COVID-19 pandemic (2020-2022)",
+        width=450,
+        height=270
     )
 
-    warnings.filterwarnings('ignore')
+    base = alt.Chart(depression)
+
+    vline = base.mark_rule(
+        color="grey",
+        strokeWidth=1.2,
+        strokeDash=[4,2]
+    ).encode(
+        x='Year:O',
+        opacity=alt.condition("datum.Year == 2020", alt.value(1), alt.value(0))
+    )
+
+    text = alt.Chart(pd.DataFrame({'year': [2020], 'label': ['COVID-19 pandemic']})).mark_text(
+        align='left',
+        dy=110, fontWeight="bold", #fontSize=16, lineBreak=r'\n',
+        color="grey"
+    ).encode(
+        x='year:O',
+        text='label'
+    )
+
+    error_band = base.transform_filter(
+        selection
+    ).mark_area(
+        opacity=0.2
+    ).encode(
+        x="Year:O",
+        y="Confidence_limit_Low",
+        y2="Confidence_limit_High",
+        color=alt.Color("State:N")
+    )
+
+    line = base.mark_line(
+        point=True
+    ).transform_filter(
+        selection
+    ).encode(
+        alt.X("Year:O").title("Year"),
+        alt.Y("Depression_rate").scale(domain=(0, 30)).title("Depression Rate (%)"),
+        alt.Color("State:N", legend=alt.Legend(
+            orient="top",
+            direction='horizontal',
+        )),
+        tooltip=["State:N", "Depression_rate:Q"]
+    ).properties(
+        title="Depression by State, 2011-2022",
+        width=500,
+        height=270
+    )
+
+    return map | (vline + text + error_band + line)
+
+
+if __name__ == '__main__':
+    # st.markdown(
+    # f"""
+    # <style>
+    #     .reportview-container .main .block-container{{
+    #         margin-left: {1}rem;
+    #         max-width: {1800}px;
+    #         padding-top: {1}rem;
+    #         padding-bottom: {1}rem;
+    #     }}
+    #     .reportview-container .main {{
+    #         color: white;
+    #         background-color: black;
+    #     }}
+    # </style>
+    # """
+    # ,unsafe_allow_html=True,
+    # )
+    st.set_page_config(
+        page_title="Depression in the US",
+        layout="wide"
+    )
+
     countries = alt.topo_feature(data.world_110m.url, 'countries')
     values = pd.read_csv("burden-disease-from-each-mental-illness.csv")
     values.rename(columns={
@@ -304,8 +392,14 @@ if __name__ == '__main__':
     st.markdown("Understanding which groups are more vulnerable to depression allows us to prioritize support for those individuals, such as our mothers, sisters, and girlfriends. For parents, it's crucial to monitor the mental well-being of your teenage children and provide them with the care and attention they need. If you belong to one of these vulnerable groups, remember to stay positive and persevere through temporary low points in life. You got this!")
 
     ######## Third Plot #########
-    st.markdown('## Depression can Still be Cured')
-    st.markdown("Or other topics")
+    # st.markdown('## Depression can Still be Cured')
+    st.subheader("How is the Recent Prevalence of Depression?")
+    st.markdown("Given the recent COVID-19 pandemic, there is growing concern about its negative impact on mental health. The World Health Organization (WHO) has reported a significant 25% increase in the global prevalence of anxiety and depression in the first year of the pandemic. To gain insights, we can look at the depression data in the US for some clues.")
+    st.markdown("The interactive graph below is based on the survey data collected through the Behavior Risk Factor Surveillance System, which is administered by the Centers for Disease Control and Prevention. It reflects prevalence estimates based on age-adjusted percentage of adults who answered “yes” when asked whether they had ever been told they have a form of depression. Following the onset of the COVID-19 pandemic, we can see a growth in the rate of adults who have ever had depression in a majority of states. For example, while the prevalence in West Virginia and Kentucky remains high, Tennessee and Michigan have shown notable increases. You can view data for multiple states simultaneously by pressing the “shift” key.")
+
+    st.altair_chart(plot_depression_recent_prevalence(), use_container_width=True)
+
+    st.markdown("While the US still faces a high prevalence of depression, there remains a significant treatment gap. In 2021, an estimated 61.0% of U.S. adults aged 18 or older, and only an estimated 40.6% of U.S. adolescents with a major depressive episode received treatment in the past year, according to the statistics of the National Institute of Mental Health.")
 
 
     ####### References ###########
@@ -316,3 +410,4 @@ if __name__ == '__main__':
     st.markdown("[2]. 'Major Depression.' *National Institute of Mental Health*, https://www.nimh.nih.gov/health/statistics/major-depression#part_2567. [Apr.24, 2024]")
     st.markdown("[3]. 'Percentage of People in the U.S. who suffered from depression from 1990 to 2019 by gender.' *statista*, https://www.statista.com/statistics/979898/percentage-of-people-with-depression-us-by-gender. [Apr.24, 2024]")
     st.markdown("[4]. Twenge, Jean, et.al. 'Age, Period, and Cohort Trends in Mood Disorder Indicators and Suicide-Related Outcomes in a Nationally Representative Datasets, 2005-2017.' *American Psychological Association*, https://www.apa.org/pubs/journals/releases/abn-abn0000410.pdf. [Apr.24, 2024]")
+    st.markdown("[5] https://data.cdc.gov/Behavioral-Risk-Factors/Behavioral-Risk-Factor-Surveillance-System-BRFSS-A/d2rk-yvas/about_data")
