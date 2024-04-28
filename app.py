@@ -320,7 +320,7 @@ if __name__ == '__main__':
     # )
     st.set_page_config(
         page_title="Depression in the US",
-        layout="wide"
+        layout="centered"
     )
 
     countries = alt.topo_feature(data.world_110m.url, 'countries')
@@ -348,7 +348,7 @@ if __name__ == '__main__':
 
 ######################################################################################################################
     # Displayed Contents
-    st.markdown("# Shining a Spotlight on Depression: Urgent Attention Required for this Mental Health Disorder")
+    st.markdown("# Shining a Spotlight on Depression: Attention Required for this Mental Health Disorder")
     st.markdown('## What is Mental Health Disorders?')
     st.markdown("Mental health problems, also known as mental health disorders or mental illnesses, encompass a wide range of conditions that affect a person's mood, thinking, behavior, and overall psychological well-being. Mental health problems are classified into several categories according to recognized systems such as the Diagnostic and Statistical Manual of Mental Disorders (DSM) and the International Classification of Diseases (ICD). Some common categories include: **Anxiety Disorders**, **Eating Disorders**, **Schizophrenia**, and Trauma and Stressor-Related Disorders and Mood Disorders, which include conditions like **depression** and **bipolar disorder**, characterized by significant disturbances in a person's mood and emotional state.")
 
