@@ -297,7 +297,7 @@ def plot_depression_recent_prevalence():
         height=220
     )
 
-    return map & (vline + text + error_band + line)
+    return map | (vline + text + error_band + line)
 
 
 if __name__ == '__main__':
@@ -396,7 +396,7 @@ if __name__ == '__main__':
     st.markdown("The recent COVID-19 pandemic is another factor worth noticing in the discussion of Depression. The widespread loss of loved ones and the lingering effects of illness have taken a toll on individuals, potentially impacting their ability to function optimally in various aspects of life. Furthermore, the pandemic-induced economic downturn has added another layer of concern, raising questions about potential shifts in depression rates. The World Health Organization (WHO) has reported **a significant 25% increase in the global prevalence of anxiety and depression in the first year of the pandemic**. As we seek deeper understanding, our focus remains on analyzing depression data within the United States, hoping to glean insights into this complex issue.")
     st.markdown("The interactive graph below is based on the survey data collected through the Behavior Risk Factor Surveillance System, which is administered by the Centers for Disease Control and Prevention. It reflects prevalence estimates based on age-adjusted percentage of adults who answered “yes” when asked whether they had ever been told they have a form of depression. Following the onset of the COVID-19 pandemic, we can see a growth in the rate of adults who have ever had depression in a majority of states. For example, while **the prevalence in West Virginia and Kentucky remains high, Tennessee and Michigan have shown notable increases**. You can view data for multiple states simultaneously by pressing the “shift” key.")
 
-    st.altair_chart(plot_depression_recent_prevalence(), use_container_width=True)
+    st.altair_chart(plot_depression_recent_prevalence(), use_container_width=False)
 
     ######## Potential Treatment and Conclusion############
     st.markdown('## What Can We Do to Fight Against Depression?')
