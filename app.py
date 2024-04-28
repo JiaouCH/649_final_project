@@ -297,7 +297,7 @@ def plot_depression_recent_prevalence():
         height=270
     )
 
-    return map | (vline + text + error_band + line)
+    return map & (vline + text + error_band + line)
 
 
 if __name__ == '__main__':
