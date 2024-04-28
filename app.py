@@ -244,8 +244,8 @@ def plot_depression_recent_prevalence():
         selection
     ).properties(
         title="Prevalence of Depression by State after the COVID-19 pandemic (2020-2022)",
-        width=350,
-        height=170
+        width=400,
+        height=220
     )
 
     base = alt.Chart(depression)
@@ -293,11 +293,11 @@ def plot_depression_recent_prevalence():
         tooltip=["State:N", "Depression_rate:Q"]
     ).properties(
         title="Depression by State, 2011-2022",
-        width=350,
-        height=170
+        width=400,
+        height=220
     )
 
-    return map | (vline + text + error_band + line)
+    return map & (vline + text + error_band + line)
 
 
 if __name__ == '__main__':
