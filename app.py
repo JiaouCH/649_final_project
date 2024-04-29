@@ -208,7 +208,7 @@ def creat_plot_line_second(df, color_col, title):
         )
 
         # Put them all together
-        final_viz = alt.layer(line, points, selectors, rules, text)
+        final_viz = alt.layer(line, rules, points, selectors, text)
         return final_viz
 
 ##### Third Plot ########
@@ -225,7 +225,7 @@ def plot_depression_recent_prevalence():
         fields=["LocationID"],
         value=[{"LocationID":54}, {"LocationID":21}, {"LocationID":26}, {"LocationID":47}],
         empty=False)
-    stroke_width_condition = alt.condition(selection, alt.value(1.5), alt.value(0.4))
+    stroke_width_condition = alt.condition(selection, alt.value(1.5), alt.value(0))
 
     map = alt.Chart(states).mark_geoshape(stroke="black").project(
         type='albersUsa'
@@ -261,7 +261,7 @@ def plot_depression_recent_prevalence():
 
     text = alt.Chart(pd.DataFrame({'year': [2020], 'label': ['COVID-19 pandemic']})).mark_text(
         align='left',
-        dy=110, fontWeight="bold", #fontSize=16, lineBreak=r'\n',
+        dy=90, fontWeight="bold", #fontSize=16, lineBreak=r'\n',
         color="grey"
     ).encode(
         x='year:O',
@@ -358,7 +358,7 @@ if __name__ == '__main__':
 
     col1, col2 = st.columns(2)
     with col1:
-        subgroup_choice = st.selectbox("Select the disease you would like to explore:", ['Depression', 'Schizophrenia', 'Bipolar Disorder', 'Eating Disorders', 'Anxiety Disorders'])
+        subgroup_choice = st.selectbox("Select the illness you would like to explore:", ['Depression', 'Schizophrenia', 'Bipolar Disorder', 'Eating Disorders', 'Anxiety Disorders'])
 
     with col2:
         year_choice = st.selectbox("Select the year you would like to explore:", [2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990])
@@ -396,7 +396,7 @@ if __name__ == '__main__':
     st.markdown("The recent COVID-19 pandemic is another factor worth noticing in the discussion of Depression. The widespread loss of loved ones and the lingering effects of illness have taken a toll on individuals, potentially impacting their ability to function optimally in various aspects of life. Furthermore, the pandemic-induced economic downturn has added another layer of concern, raising questions about potential shifts in depression rates. The World Health Organization (WHO) has reported **a significant 25% increase in the global prevalence of anxiety and depression in the first year of the pandemic**. As we seek deeper understanding, our focus remains on analyzing depression data within the United States, hoping to glean insights into this complex issue.")
     st.markdown("The interactive graph below is based on the survey data collected through the Behavior Risk Factor Surveillance System, which is administered by the Centers for Disease Control and Prevention. It reflects prevalence estimates based on age-adjusted percentage of adults who answered “yes” when asked whether they had ever been told they have a form of depression. Following the onset of the COVID-19 pandemic, we can see a growth in the rate of adults who have ever had depression in a majority of states. For example, while **the prevalence in West Virginia and Kentucky remains high, Tennessee and Michigan have shown notable increases**. You can view data for multiple states simultaneously by pressing the “shift” key. The map on the left shows **the prevalence of depression by States after the COVID-19 pandemic (2020-2022)**")
 
-    st.altair_chart(plot_depression_recent_prevalence(), use_container_width=False)
+    st.altair_chart(plot_depression_recent_prevalence(), use_container_width=True)
 
     ######## Potential Treatment and Conclusion############
     st.markdown('## What Can We Do to Fight Against Depression?')
