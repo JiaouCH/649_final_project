@@ -300,7 +300,7 @@ def plot_depression_recent_prevalence():
     final_viz = map | (vline + text + error_band + line)
     final_viz.properties(
         width=400,
-        height=220
+        height=150
     )
 
     return final_viz
