@@ -244,8 +244,8 @@ def plot_depression_recent_prevalence():
         selection
     ).properties(
         title="Prevalence of Depression (2020-2022)",
-        width=300,
-        height=120
+        width=340,
+        height=160
     )
 
     base = alt.Chart(depression)
